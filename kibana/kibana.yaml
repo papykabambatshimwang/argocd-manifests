@@ -5,28 +5,28 @@ metadata:
   namespace: elastic
 spec:
   replicas: 1
+  selector:          # ⚠️ OBLIGATOIRE !
+    matchLabels:
+      app: kibana
   template:
+    metadata:
+      labels:        # ⚠️ Doit correspondre au selector !
+        app: kibana
     spec:
       containers:
       - name: kibana
         image: docker.io/elastic/kibana:7.17.3
+        ports:
+        - containerPort: 5601
+          name: http
         env:
         - name: ELASTICSEARCH_HOSTS
           value: "http://elasticsearch-master:9200"
+        - name: SERVER_HOST
+          value: "0.0.0.0"
         readinessProbe:
-          exec:
-            command:
-            - sh
-            - -c
-            - |
-              #!/usr/bin/env bash -e
-              http () {
-                curl -XGET -s -k --fail http://127.0.0.1:5601${1}
-              }
-              # Accepter yellow ou green pour Kibana
-              http "/api/status" | grep -q '"level":"available"'
-          failureThreshold: 3
+          httpGet:
+            path: /api/status
+            port: 5601
           initialDelaySeconds: 30
           periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 5
